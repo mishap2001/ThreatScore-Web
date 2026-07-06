@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ThreatScore</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#080b0f;color:#c8d8e8;font-family:system-ui,sans-serif;font-size:14px;overflow:hidden}
+button{cursor:pointer;font-family:inherit}
+a{color:#00d4ff;text-decoration:none}
+
+.app{display:flex;height:100vh}
+/* ── Sidebar ───────────────────────────────────────── */
+.sidebar{width:330px;flex-shrink:0;background:#0d1219;border-right:1px solid #1a2535;display:flex;flex-direction:column;overflow:hidden}
+.brand{font-family:monospace;color:#00d4ff;font-size:15px;letter-spacing:2px;padding:14px 16px;border-bottom:1px solid #1a2535}
+.brand span{font-size:10px;color:#4a6080;letter-spacing:1px}
+.scanbox{padding:12px 14px;border-bottom:1px solid #1a2535}
+.scanrow{display:flex;gap:7px}
+input[type=text],input[type=password],input.search,textarea{background:#080b0f;border:1px solid #243040;border-radius:6px;padding:9px 11px;color:#c8d8e8;font-family:monospace;font-size:13px;outline:none}
+input:focus,textarea:focus{border-color:#00d4ff}input::placeholder,textarea::placeholder{color:#4a6080}
+#iocIn{flex:1;min-width:0}
+.sbtn{background:#00d4ff;color:#080b0f;border:none;border-radius:6px;padding:0 16px;font-size:12px;font-weight:700;letter-spacing:2px}
+.sbtn:disabled{opacity:.5}
+.typehint{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:#4a6080;margin-top:6px;height:11px}
+.statline{display:flex;gap:14px;padding:9px 16px;border-bottom:1px solid #1a2535;font-family:monospace;font-size:10px;color:#4a6080}
+.statline b{font-family:monospace}.s-t b{color:#00d4ff}.s-h b{color:#ff3d5a}.s-c b{color:#00e676}
+.search{width:calc(100% - 28px);margin:10px 14px 6px;font-size:12px}
+.histlist{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 8px 8px}
+.hitem{display:flex;align-items:flex-start;gap:8px;padding:8px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent}
+.hitem:hover{background:#111820}.hitem.active{background:#111820;border-color:#243040}
+.hdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.hd-HIGH{background:#ff3d5a}.hd-MEDIUM{background:#ffaa00}.hd-LOW{background:#4488ff}.hd-CLEAN{background:#00e676}.hd-UNKNOWN{background:#4a6080}
+.hmeta{flex:1;min-width:0;overflow:hidden}
+.hioc{display:block;font-family:monospace;font-size:11px;color:#c8d8e8;word-break:break-all;line-height:1.4}
+.hsub{display:block;font-size:9px;color:#4a6080;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hempty{padding:18px;text-align:center;color:#4a6080;font-family:monospace;font-size:11px}
+.sidefoot{display:flex;gap:6px;padding:10px 14px;border-top:1px solid #1a2535}
+.ftbtn{flex:1;background:#111820;border:1px solid #243040;border-radius:6px;padding:8px;color:#8aaccc;font-size:11px;letter-spacing:1px}
+.ftbtn:hover{border-color:#00d4ff;color:#00d4ff}
+
+/* ── Main ─────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;padding:18px 20px}
+.empty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#4a6080;gap:12px}
+.empty .big{font-size:40px;opacity:.5}.empty .t{font-family:monospace;font-size:13px}.empty .s{font-size:11px;max-width:340px;line-height:1.6}
+.cta{background:#00d4ff;color:#080b0f;border:none;border-radius:6px;padding:9px 18px;font-size:12px;font-weight:700;letter-spacing:1px}
+.card{background:#0d1219;border:1px solid #1a2535;border-radius:8px;overflow:hidden;margin-bottom:14px}
+#prog{display:none}.prog-on{display:block!important}
+.pb{height:2px;background:linear-gradient(90deg,transparent,#00d4ff,transparent);background-size:200% 100%;animation:sc 1.5s infinite}
+@keyframes sc{0%{background-position:-100% 0}100%{background-position:200% 0}}
+.steps{display:flex;flex-wrap:wrap;gap:5px;padding:10px 12px}.step{font-family:monospace;font-size:10px;padding:2px 7px;border-radius:10px;background:#111820;border:1px solid #1a2535;color:#4a6080}
+.step.done{border-color:#00e676;color:#00e676;background:#002a14}.step.active{border-color:#00d4ff;color:#00d4ff;background:rgba(0,212,255,.08)}
+#result{display:none}.res-on{display:block!important}
+.vhdr{display:flex;align-items:center;gap:10px;padding:13px 14px;border-bottom:1px solid #1a2535;flex-wrap:wrap}
+.tb{font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;letter-spacing:1px}.tb-IP{background:#0a1a3a;color:#4488ff}.tb-DOMAIN{background:#1a0a3a;color:#bb86fc}.tb-URL{background:#0a2a1a;color:#00e676}.tb-HASH{background:#2a0a0a;color:#ff3d5a}
+.vioc{font-family:monospace;font-size:12px;color:#c8d8e8;flex:1;min-width:120px;word-break:break-all}
+.vp{font-family:monospace;font-size:10px;font-weight:700;letter-spacing:2px;padding:3px 10px;border-radius:12px}
+.HIGH{background:#2a0810;color:#ff3d5a;border:1px solid #ff3d5a}.MEDIUM{background:#2e1f00;color:#ffaa00;border:1px solid #ffaa00}.LOW{background:#0a1530;color:#4488ff;border:1px solid #4488ff}.CLEAN{background:#002a14;color:#00e676;border:1px solid #00e676}.UNKNOWN{background:#111820;color:#4a6080;border:1px solid #1a2535}
+.vact{display:flex;gap:6px}
+.act{background:#111820;border:1px solid #243040;border-radius:5px;padding:4px 9px;color:#8aaccc;font-size:10px;letter-spacing:1px}.act:hover{border-color:#00d4ff;color:#00d4ff}
+.aib{padding:12px 14px;font-family:monospace;font-size:11px;line-height:1.8;color:#8aaccc;white-space:pre-wrap;overflow:auto}.ail{color:#00d4ff;font-weight:500}
+.srcgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.src{background:#0d1219;border:1px solid #1a2535;border-radius:8px;overflow:hidden}
+.shdr{display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer}.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dok{background:#00e676}.dw{background:#ffaa00}.dd{background:#ff3d5a}.di{background:#00d4ff}
+.sname{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;flex:1}.sbdg{font-family:monospace;font-size:9px;padding:2px 6px;border-radius:3px}
+.bdd{background:#2a0810;color:#ff3d5a}.bdw{background:#2e1f00;color:#ffaa00}.bdo{background:#002a14;color:#00e676}.bdi{background:#0a1530;color:#4488ff}
+.srclink{font-size:12px;padding:0 2px;color:#4a6080}.srclink:hover{color:#00d4ff}
+.sbody{padding:9px 12px;border-top:1px solid #1a2535;font-family:monospace;font-size:11px;line-height:1.8;display:none}.sbody.open{display:block}
+.kv{display:flex;gap:6px}.k{color:#4a6080;min-width:90px;flex-shrink:0}.v{color:#c8d8e8;word-break:break-all}.vr{color:#ff3d5a}.vy{color:#ffaa00}.vg{color:#00e676}.vc{color:#00d4ff}
+#chat{display:none}.chat-on{display:block!important}.chdr{padding:10px 14px;border-bottom:1px solid #1a2535;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#00d4ff}
+.msgs{padding:10px;display:flex;flex-direction:column;gap:8px;max-height:360px;overflow-y:auto}.bub{padding:8px 11px;border-radius:7px;font-size:12px;line-height:1.55;max-width:92%}
+.bub.sys{background:#111820;border:1px solid #1a2535;color:#4a6080;font-family:monospace;font-size:10px;align-self:center;text-align:center;max-width:100%}
+.bub.q{background:rgba(0,212,255,.07);border:1px solid rgba(0,212,255,.2);color:#00d4ff;font-family:monospace;font-size:11px;align-self:flex-end}
+.bub.a{background:#111820;border:1px solid #1a2535;color:#c8d8e8;font-size:11px;line-height:1.6;align-self:flex-start;white-space:pre-wrap;font-family:monospace;position:relative}
+.bub.a pre.code{background:#080b0f;border:1px solid #243040;border-radius:5px;padding:8px;margin:5px 0;white-space:pre;overflow-x:auto;font-size:10px}
+.bub.a code{background:#080b0f;border:1px solid #243040;border-radius:3px;padding:0 3px}
+.acopy{position:absolute;top:5px;right:6px;background:#0d1219;border:1px solid #243040;border-radius:4px;color:#4a6080;font-size:9px;padding:1px 5px;opacity:0}.bub.a:hover .acopy{opacity:1}.acopy:hover{color:#00d4ff;border-color:#00d4ff}
+.qqs{padding:8px 10px;border-top:1px solid #1a2535;display:flex;flex-direction:column;gap:4px}.ql{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#4a6080;margin-bottom:3px}
+.qb{background:#111820;border:1px solid #1a2535;border-radius:5px;padding:6px 10px;color:#c8d8e8;font-size:12px;text-align:left;display:flex;align-items:center;gap:7px;width:100%}.qn{font-family:monospace;font-size:9px;color:#4a6080;min-width:12px}
+.cirow{padding:8px 10px;border-top:1px solid #1a2535;display:flex;gap:7px}.ci{flex:1}.cs{background:transparent;border:1px solid #00d4ff;border-radius:5px;padding:7px 12px;color:#00d4ff;font-size:14px}
+
+/* ── Overlays / toasts ────────────────────────────── */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;display:flex;align-items:center;justify-content:center;padding:20px}
+.ovb{background:#0d1219;border:1px solid #1a2535;border-radius:10px;padding:18px;width:100%;max-width:430px}.ovt{font-size:10px;letter-spacing:2px;color:#4a6080;text-transform:uppercase;margin-bottom:12px}
+.ob{display:block;width:100%;background:#111820;border:1px solid #1a2535;border-radius:6px;padding:9px 12px;color:#c8d8e8;font-size:13px;text-align:left;margin-bottom:6px}.obc{color:#4a6080;border-color:#243040;margin-top:4px}
+select{background:#080b0f;border:1px solid #243040;border-radius:6px;padding:9px 12px;color:#c8d8e8;font-size:13px;width:100%;margin-bottom:6px}
+.tabs{display:flex;gap:2px;margin-bottom:14px;border-bottom:1px solid #1a2535}
+.tab{flex:1;padding:8px 6px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#4a6080;background:transparent;border:none;border-bottom:2px solid transparent}
+.tab.active{color:#00d4ff;border-bottom-color:#00d4ff}.tab-pane{display:none}.tab-pane.active{display:block}
+.hint{font-size:10px;color:#4a6080;line-height:1.5;margin-bottom:10px}
+.kgrid{display:flex;flex-direction:column;gap:5px;margin-bottom:12px;max-height:230px;overflow:auto}.krow{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;background:#111820;border:1px solid #1a2535;border-radius:6px}.kname{flex:1}.kset{font-size:9px;font-family:monospace;padding:1px 6px;border-radius:3px}.kon{background:#002a14;color:#00e676}.koff{background:#2a0810;color:#ff5a72}
+.bulkta{width:100%;height:160px;resize:vertical;line-height:1.5}
+.toasts{position:fixed;bottom:16px;right:16px;z-index:1500;display:flex;flex-direction:column;gap:8px}
+.toast{background:#0d1219;border:1px solid #243040;border-left:3px solid #00d4ff;border-radius:6px;padding:10px 14px;font-size:12px;color:#c8d8e8;max-width:340px;box-shadow:0 4px 16px rgba(0,0,0,.5);animation:slidein .2s}
+.toast.err{border-left-color:#ff3d5a}.toast.ok{border-left-color:#00e676}
+@keyframes slidein{from{transform:translateX(20px);opacity:0}to{transform:none;opacity:1}}
+@media(max-width:780px){.app{flex-direction:column}.sidebar{width:100%;max-height:42vh}.srcgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">&#9679; THREATSCORE <span>win</span></div>
+    <div class="scanbox">
+      <div class="scanrow">
+        <input type="text" id="iocIn" placeholder="IP, domain, URL, hash..." autocorrect="off" autocapitalize="none" spellcheck="false">
+        <button class="sbtn" id="scanBtn" onclick="TS.scan()">SCAN</button>
+      </div>
+      <div class="typehint" id="typeHint"></div>
+    </div>
+    <div class="statline">
+      <span class="s-t">total <b id="st">0</b></span>
+      <span class="s-h">high <b id="sh">0</b></span>
+      <span class="s-c">clean <b id="sc">0</b></span>
+    </div>
+    <input class="search" id="histSearch" type="text" placeholder="&#9906; search history...">
+    <div class="histlist" id="histList"><div class="hempty">No scans yet</div></div>
+    <div class="sidefoot">
+      <button class="ftbtn" onclick="TS.openBulk()">+ BULK</button>
+      <button class="ftbtn" onclick="TS.exportCsv()">CSV</button>
+      <button class="ftbtn" onclick="TS.openSettings()">&#9881;</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="empty" id="empty">
+      <div class="big">&#9679;</div>
+      <div class="t">Enter an IOC to scan</div>
+      <div class="s" id="emptySub">IP, domain, URL, or file hash. Results, sources and AI analysis appear here.</div>
+      <div id="emptyCta"></div>
+    </div>
+
+    <div class="card" id="prog">
+      <div style="padding:9px 12px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#4a6080" id="progLabel">Scanning...</div>
+      <div class="pb"></div>
+      <div class="steps" id="steps"></div>
+    </div>
+
+    <div id="result">
+      <div class="card" id="vcard">
+        <div class="vhdr">
+          <span class="tb" id="vtype"></span>
+          <span class="vioc" id="vioc"></span>
+          <span class="vp" id="vpill"></span>
+          <span class="vact">
+            <button class="act" onclick="TS.copyReport()">COPY</button>
+            <button class="act" onclick="TS.exportReport()">EXPORT</button>
+          </span>
+        </div>
+        <div class="aib" id="aibody"></div>
+      </div>
+
+      <div class="srcgrid" id="srcs"></div>
+
+      <div class="card" id="osintCard" style="display:none">
+        <div class="chdr">&#127760; Gemini OSINT</div>
+        <div class="aib" id="osintBody"></div>
+      </div>
+
+      <div class="card" id="chat">
+        <div class="chdr">&#128172; IOC Chat</div>
+        <div class="msgs" id="msgs"></div>
+        <div class="qqs"><div class="ql">Quick Questions</div><div id="qbtns"></div></div>
+        <div class="cirow">
+          <input class="ci" type="text" id="ci" placeholder="Ask a follow-up..." autocorrect="off" autocapitalize="none">
+          <button class="cs" onclick="TS.sendChat()">&#10148;</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="toasts" id="toasts"></div>
+
+<script>
+var BUILTIN_QUESTIONS = [
+  "Is this IOC related to any known threat actor or campaign?",
+  "What MITRE ATT&CK techniques apply here?",
+  "Generate SIEM detection rules for this IOC",
+  "Is this likely a false positive? Why?",
+  "What other IOCs might be associated with this infrastructure?",
+  "Write an incident report summary for this IOC",
+  "What is the risk to my organization if this IOC appears in our logs?"
+];
+var SIEM_PLATFORMS = ["Splunk (SPL)","IBM QRadar (AQL)","Microsoft Sentinel (KQL)","Elastic / EQL","Chronicle / YARA-L","Sumo Logic"];
+var AI_MODELS = ["gpt-4o","gpt-4o-mini","gpt-4.1","gpt-4.1-mini","gpt-4-turbo"];
+
+function gid(id){return document.getElementById(id);}
+function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];});}
+function kv(k,v,cls){return '<div class="kv"><span class="k">'+esc(k)+'</span><span class="v'+(cls?" "+cls:"")+'">'+esc(v==null?"N/A":v)+'</span></div>';}
+
+function refang(s){
+  return String(s||"").trim()
+    .replace(/hxxp/gi,"http")
+    .replace(/\[\.\]|\(\.\)|\{\.\}|\[dot\]|\(dot\)/gi,".")
+    .replace(/\[:\]/g,":").replace(/\[\/\/\]/g,"//")
+    .replace(/\[at\]|\(at\)/gi,"@").trim();
+}
+function defang(s){return String(s||"").replace(/https/gi,"hxxps").replace(/http/gi,"hxxp").replace(/\./g,"[.]");}
+function hashKind(s){s=String(s||"");if(/^[a-fA-F0-9]{32}$/.test(s))return"MD5";if(/^[a-fA-F0-9]{40}$/.test(s))return"SHA1";if(/^[a-fA-F0-9]{64}$/.test(s))return"SHA256";return"";}
+
+function typeLocal(s){
+  s=refang(s);
+  if(/^https?:\/\//i.test(s))return"URL";
+  if(/^(\d{1,3}\.){3}\d{1,3}$/.test(s)){var p=s.split(".").map(Number);if(p.every(function(x){return x>=0&&x<=255;}))return"IP";}
+  if(/^[0-9a-fA-F:]+$/.test(s)&&s.indexOf(":")>=0)return"IP";
+  if(/^[a-fA-F0-9]{32}$/.test(s)||/^[a-fA-F0-9]{40}$/.test(s)||/^[a-fA-F0-9]{64}$/.test(s))return"HASH";
+  if(/^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/.test(s))return"DOMAIN";
+  return"UNKNOWN";
+}
+
+function toast(msg,kind){
+  var t=document.createElement("div");
+  t.className="toast"+(kind?" "+kind:"");
+  t.textContent=msg;
+  gid("toasts").appendChild(t);
+  setTimeout(function(){t.style.opacity="0";t.style.transition="opacity .3s";setTimeout(function(){t.remove();},300);},3500);
+}
+
+function hostFromUrl(s){var m=String(s).match(/^https?:\/\/([^\/?#]+)/i);return m?m[1].replace(/^[^@]*@/,"").replace(/:\d+$/,""):s;}
+function sourceLink(name,d,ioc,type){
+  var e=encodeURIComponent(ioc), host=/^https?:\/\//i.test(ioc)?hostFromUrl(ioc):ioc, eh=encodeURIComponent(host);
+  if(name==="VirusTotal"){
+    if(type==="IP")return"https://www.virustotal.com/gui/ip-address/"+e;
+    if(type==="DOMAIN")return"https://www.virustotal.com/gui/domain/"+e;
+    if(type==="HASH")return"https://www.virustotal.com/gui/file/"+e;
+    return"https://www.virustotal.com/gui/search/"+e;
+  }
+  if(name==="AbuseIPDB")return"https://www.abuseipdb.com/check/"+e;
+  if(name==="GreyNoise")return"https://viz.greynoise.io/ip/"+e;
+  if(name==="IPInfo")return"https://ipinfo.io/"+e;
+  if(name==="urlscan")return"https://urlscan.io/search/#domain%3A"+eh;
+  if(name==="OTX"){var sec=type==="IP"?"ip":type==="DOMAIN"?"domain":type==="HASH"?"file":"url";return"https://otx.alienvault.com/indicator/"+sec+"/"+e;}
+  if(name==="MalwareBazaar")return"https://bazaar.abuse.ch/sample/"+e+"/";
+  if(name==="Cloudflare")return d&&d.scanId?"https://radar.cloudflare.com/scan/"+encodeURIComponent(d.scanId):null;
+  return null;
+}
+
+function mdToHtml(t){
+  var s=esc(t);
+  s=s.replace(/```(\w*)\n?([\s\S]*?)```/g,function(_,l,c){return '<pre class="code">'+c.replace(/\n+$/,"")+'</pre>';});
+  s=s.replace(/`([^`\n]+)`/g,'<code>$1</code>');
+  s=s.replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');
+  s=s.replace(/^#{1,6}\s*(.+)$/gm,'<b>$1</b>');
+  return s;
+}
+
+var es=null;
+
+window.TS = {
+  _scanning:false, _hist:[], _current:null, _result:null,
+
+  init:function(){
+    gid("iocIn").addEventListener("keydown",function(e){if(e.key==="Enter")TS.scan();});
+    gid("iocIn").addEventListener("input",function(){
+      var v=this.value.trim();
+      gid("typeHint").textContent=v?("detected: "+typeLocal(v)):"";
+    });
+    gid("ci").addEventListener("keydown",function(e){if(e.key==="Enter")TS.sendChat();});
+    gid("histSearch").addEventListener("input",function(){TS.renderHist();});
+    document.addEventListener("keydown",function(e){
+      if(e.key==="Escape"){var ov=document.querySelector(".ov");if(ov)ov.remove();}
+      if(e.key==="/"&&document.activeElement.tagName!=="INPUT"&&document.activeElement.tagName!=="TEXTAREA"){e.preventDefault();gid("iocIn").focus();}
+    });
+    fetch("/api/history").then(function(r){return r.json();}).then(function(d){TS.setHistory(d.history||[]);});
+    fetch("/api/keys").then(function(r){return r.json();}).then(function(d){
+      var any=(d.keys||[]).some(function(k){return k.set;});
+      if(!any){
+        gid("emptySub").textContent="No API keys set yet — add at least VirusTotal and OpenAI to get useful results.";
+        gid("emptyCta").innerHTML='<button class="cta" onclick="TS.openSettings()">Open Settings</button>';
+      }
+    });
+  },
+
+  setBusy:function(b){TS._scanning=b;var btn=gid("scanBtn");if(btn){btn.disabled=b;btn.textContent=b?"...":"SCAN";}},
+
+  showMain:function(which){
+    gid("empty").style.display = which==="empty" ? "flex" : "none";
+    gid("prog").classList.toggle("prog-on", which==="prog");
+    gid("result").classList.toggle("res-on", which==="result");
+  },
+
+  scan:function(){
+    if(TS._scanning)return;
+    var ioc=refang(gid("iocIn").value);
+    if(!ioc){toast("Enter an IOC first","err");return;}
+    if(typeLocal(ioc)==="UNKNOWN"){toast("Unrecognized IOC type","err");return;}
+    gid("iocIn").value=ioc;
+    TS._current={ioc:ioc,type:typeLocal(ioc)};
+
+    TS.setBusy(true);
+    gid("empty").style.display="none";
+    gid("vcard").style.display="none";
+    gid("osintCard").style.display="none";
+    gid("chat").className="card";
+    gid("srcs").innerHTML="";gid("msgs").innerHTML="";gid("steps").innerHTML="";
+    gid("progLabel").textContent="Scanning "+ioc+"...";
+    gid("prog").classList.add("prog-on");   // keep phases visible the whole scan
+    gid("result").classList.add("res-on");  // sources fill in below as they arrive
+
+    if(es)es.close();
+    es=new EventSource("/api/scan?ioc="+encodeURIComponent(ioc));
+    es.addEventListener("progress",function(e){TS.setProgress(JSON.parse(e.data));});
+    es.addEventListener("step",function(e){TS.markStep(JSON.parse(e.data));});
+    es.addEventListener("source",function(e){var d=JSON.parse(e.data);TS.renderSource(d.name,d.data);});
+    es.addEventListener("done",function(e){var d=JSON.parse(e.data);es.close();es=null;TS.finishScan(d.result,d.history);});
+    es.addEventListener("scanfail",function(e){es.close();es=null;TS.setBusy(false);gid("prog").classList.remove("prog-on");if(!TS._result)TS.showMain("empty");toast("Scan error: "+JSON.parse(e.data),"err");});
+    es.onerror=function(){if(es){es.close();es=null;}if(TS._scanning){TS.setBusy(false);gid("prog").classList.remove("prog-on");toast("Connection to server lost","err");}};
+  },
+
+  renderOsint:function(t){
+    var card=gid("osintCard");
+    if(!t){card.style.display="none";return;}
+    card.style.display="";
+    gid("osintBody").innerHTML=mdToHtml(t);
+  },
+
+  setProgress:function(steps){
+    var html="";for(var i=0;i<steps.length;i++){html+='<span class="step" id="s-'+steps[i].replace(/[^a-z0-9]/gi,"")+'">'+esc(steps[i])+'</span>';}
+    gid("steps").innerHTML=html;
+  },
+  markStep:function(name){
+    var els=document.querySelectorAll(".step.active");for(var i=0;i<els.length;i++){els[i].classList.remove("active");els[i].classList.add("done");}
+    var el=gid("s-"+name.replace(/[^a-z0-9]/gi,""));if(el)el.classList.add("active");
+  },
+
+  renderSource:function(name,d){
+    var id="src-"+name.replace(/[^a-z0-9]/gi,"");
+    var el=gid(id);
+    if(!el){el=document.createElement("div");el.id=id;el.className="src";gid("srcs").appendChild(el);}
+    var dot="di",bdg="",bc="bdi",body="";
+
+    if(name==="VirusTotal"&&d&&!d.skipped&&!d.error){
+      var m=d.malicious||0;dot=m>10?"dd":m>0?"dw":"dok";bdg=m+" malicious";bc=m>10?"bdd":m>0?"bdw":"bdo";
+      body=kv("malicious",d.malicious,m>0?"vr":"")+kv("suspicious",d.suspicious,d.suspicious>0?"vy":"")+kv("harmless",d.harmless,"vg")+kv("reputation",d.reputation);
+      if(d.asn)body+=kv("asn",d.asn)+kv("owner",d.as_owner)+kv("network",d.network);
+      if(d.family)body+=kv("family",d.family,"vr");if(d.tld)body+=kv("tld",d.tld);
+    } else if(name==="AbuseIPDB"&&d&&!d.skipped&&!d.error){
+      var sc=d.score||0;dot=sc>50?"dd":sc>10?"dw":"dok";bdg="Score "+sc;bc=sc>50?"bdd":sc>10?"bdw":"bdo";
+      body=kv("score",d.score,sc>50?"vr":sc>10?"vy":"vg")+kv("reports",d.reports)+kv("tor",String(d.is_tor),d.is_tor?"vr":"")+kv("isp",d.isp);
+    } else if(name==="IPInfo"&&d&&!d.skipped&&!d.error){
+      dot="di";bdg="Routing";body=kv("as_name",d.as_name)+kv("country",(d.country||"")+" "+(d.cc||""));
+    } else if(name==="GreyNoise"&&d&&!d.skipped&&!d.error){
+      dot=d.classification==="malicious"?"dd":d.classification==="benign"?"dok":"di";bdg=d.classification||"unknown";bc=d.classification==="malicious"?"bdd":"bdo";
+      body=kv("noise",String(d.noise),d.noise?"vr":"vg")+kv("riot",String(d.riot),d.riot?"vg":"")+kv("classification",d.classification);
+    } else if(name==="OTX"&&d&&!d.skipped&&!d.error){
+      var pu=d.pulses||0;dot=pu>5?"dd":pu>0?"dw":"dok";bdg=pu+" pulses";bc=pu>5?"bdd":pu>0?"bdw":"bdo";
+      body=kv("pulses",pu,pu>0?"vr":"vg")+kv("tags",d.tags);
+    } else if(name==="urlscan"&&d&&!d.skipped&&!d.error){
+      dot="di";bdg=(d.total||0)+" results";body=kv("ip",d.ip)+kv("server",d.server)+kv("asn",d.asn);
+    } else if(name==="Cloudflare"&&d&&!d.skipped&&!d.error){
+      var cm=d.malicious,hasData=(d.domain&&d.domain!=="N/A")||(d.requests&&d.requests>0);
+      if(cm==="YES"){dot="dd";bdg="malicious";bc="bdd";}else if(!hasData){dot="di";bdg="no data";bc="bdi";}else{dot="dok";bdg="not flagged";bc="bdo";}
+      body=kv("malicious",cm,cm==="YES"?"vr":cm==="NO"?"vg":"")+kv("domain",d.domain)+kv("ip",d.ip)+kv("country",d.country)+kv("asn",d.asn)+kv("requests",d.requests)+kv("external",d.external);
+    } else if(name==="ThreatYeti"&&d&&!d.skipped&&!d.error){
+      var lv=d.risk_level||"none";dot=lv==="high"?"dd":lv==="mid"?"dw":lv==="low"?"di":"dok";bdg=lv+" risk";bc=lv==="high"?"bdd":lv==="mid"?"bdw":"bdo";
+      body=kv("risk_level",lv,lv==="high"?"vr":lv==="mid"?"vy":"vg");
+    } else if(name==="MalwareBazaar"&&d&&!d.error){
+      if(d.status==="ok"){dot="dd";bdg=d.signature||"malware";bc="bdd";body=kv("file",d.file_name)+kv("sig",d.signature,"vr")+kv("anyrun",d.anyrun);}
+      else{dot="dok";bdg=d.status||"not found";bc="bdo";body=kv("status",d.status||"Not found","vg");}
+    } else {
+      var msg=d&&d.disabled?"disabled":(d&&d.skipped?"skipped":(d&&d.error?d.error:"no data"));
+      var stt=d&&d.status?d.status:"";
+      body=kv("status",msg)+(stt?kv("http/status",stt):"");
+      bdg=d&&d.disabled?"disabled":(d&&d.skipped?"skipped":(stt?String(stt):"error"));bc="bdi";dot=(d&&(d.skipped||d.disabled))?"di":"dd";
+    }
+
+    var link=(TS._current&&!(d&&(d.skipped||d.disabled)))?sourceLink(name,d,TS._current.ioc,TS._current.type):null;
+    var linkHtml=link?'<a class="srclink" href="'+esc(link)+'" target="_blank" rel="noopener" title="Open report">&#8599;</a>':'';
+    el.innerHTML='<div class="shdr"><div class="dot '+dot+'"></div><span class="sname">'+esc(name)+'</span><span class="sbdg '+bc+'">'+esc(bdg)+'</span>'+linkHtml+'</div><div class="sbody" id="'+id+'-b">'+body+'</div>';
+    var lk=el.querySelector(".srclink");if(lk)lk.addEventListener("click",function(ev){ev.stopPropagation();});
+    el.querySelector(".shdr").addEventListener("click",function(){var b=gid(id+"-b");if(b)b.classList.toggle("open");});
+  },
+
+  finishScan:function(r,hist){
+    TS.setBusy(false);TS._result=r;TS._current={ioc:r.ioc,type:r.type};
+    gid("prog").classList.remove("prog-on");
+    TS.showMain("result");
+    TS.renderVerdict(r);
+    TS.renderOsint(r.osint);
+    TS.setHistory(hist);
+    TS.renderQBtns();
+    gid("chat").className="card chat-on";
+    gid("msgs").innerHTML='<div class="bub sys">Scan complete &#8212; ask a follow-up</div>';
+  },
+
+  renderVerdict:function(r){
+    var v=r.verdict||"UNKNOWN";
+    gid("vcard").style.display="";
+    gid("vtype").className="tb tb-"+r.type;gid("vtype").textContent=r.type+(r.type==="HASH"&&hashKind(r.ioc)?" · "+hashKind(r.ioc):"");
+    gid("vioc").textContent=r.ioc;gid("vioc").title=r.ioc;
+    gid("vpill").className="vp "+v;gid("vpill").textContent=v;
+    var ai=r.aiResult||"";
+    if(/^OpenAI (skipped|error)/.test(ai))ai="AI analysis unavailable — "+ai+"\n\nReview the source intelligence below.";
+    gid("aibody").innerHTML=esc(ai).replace(/^(Verdict:|Infrastructure:|Why:|Associated activity:|Likely behavior:|Exploit pattern:|Threat attribution:|Action:)/gm,'<span class="ail">$1</span>');
+  },
+
+  setHistory:function(hist){
+    hist=hist||[];TS._hist=hist;
+    gid("st").textContent=hist.length;
+    gid("sh").textContent=hist.filter(function(h){return h.verdict==="HIGH";}).length;
+    gid("sc").textContent=hist.filter(function(h){return h.verdict==="CLEAN";}).length;
+    TS.renderHist();
+  },
+
+  renderHist:function(){
+    var q=(gid("histSearch").value||"").toLowerCase();
+    var items=TS._hist.slice().reverse().filter(function(h){return !q||String(h.ioc).toLowerCase().indexOf(q)>=0||String(h.type).toLowerCase().indexOf(q)>=0||String(h.verdict).toLowerCase().indexOf(q)>=0;});
+    var el=gid("histList");
+    if(!items.length){el.innerHTML='<div class="hempty">'+(q?"No matches":"No scans yet")+'</div>';return;}
+    el.innerHTML="";
+    items.slice(0,200).forEach(function(h){
+      var div=document.createElement("div");
+      div.className="hitem"+(TS._current&&TS._current.ioc===h.ioc?" active":"");
+      var label=esc(h.type)+(h.type==="HASH"&&hashKind(h.ioc)?" &middot; "+hashKind(h.ioc):"");
+      div.innerHTML='<span class="hdot hd-'+esc(h.verdict)+'"></span><span class="hmeta"><span class="hioc">'+esc(h.ioc)+'</span><span class="hsub">'+label+' &middot; '+esc(h.verdict)+' &middot; '+esc(h.ts)+'</span></span>';
+      div.title=(h.at||h.ts)+"  "+h.ioc;
+      div.addEventListener("click",function(){TS.loadScan(h.ioc);});
+      el.appendChild(div);
+    });
+  },
+
+  loadScan:function(ioc){
+    gid("iocIn").value=ioc;
+    fetch("/api/result?ioc="+encodeURIComponent(ioc)).then(function(r){return r.json();})
+      .then(function(d){if(d.result)TS.showResult(d.result,d.transcript||[]);else TS.scan();})
+      .catch(function(){TS.scan();});
+  },
+
+  showResult:function(r,transcript){
+    if(es){es.close();es=null;}
+    TS.setBusy(false);TS._result=r;TS._current={ioc:r.ioc,type:r.type};
+    TS.showMain("result");
+    gid("srcs").innerHTML="";
+    if(r.sources){for(var k in r.sources){if(Object.prototype.hasOwnProperty.call(r.sources,k))TS.renderSource(k,r.sources[k]);}}
+    TS.renderVerdict(r);TS.renderOsint(r.osint);TS.renderQBtns();TS.renderHist();
+    gid("chat").className="card chat-on";
+    gid("msgs").innerHTML="";
+    var head=document.createElement("div");head.className="bub sys";
+    head.textContent=(transcript&&transcript.length)?"Loaded from history — previous Q&A below":"Loaded from history — ask a follow-up";
+    gid("msgs").appendChild(head);
+    if(transcript)for(var i=0;i<transcript.length;i++)TS.addChat(transcript[i].type,transcript[i].text);
+    document.querySelector(".main").scrollTop=0;
+  },
+
+  /* ── reports ── */
+  buildReport:function(r){
+    var L=[];
+    L.push("# ThreatScore — "+r.type+" "+defang(r.ioc));
+    L.push("");L.push("**Verdict:** "+(r.verdict||"UNKNOWN"));
+    L.push("");L.push("## AI Analysis");L.push(r.aiResult||"(none)");
+    L.push("");L.push("## Intelligence");L.push("```");L.push(r.summary||"");L.push("```");
+    return L.join("\n");
+  },
+  copyReport:function(){if(!TS._result)return;navigator.clipboard.writeText(TS.buildReport(TS._result)).then(function(){toast("Report copied (IOC defanged)","ok");},function(){toast("Copy failed","err");});},
+  exportReport:function(){
+    if(!TS._result)return;
+    var name="ThreatScore_"+TS._result.type+"_"+String(TS._result.ioc).replace(/[^a-z0-9]/gi,"_").slice(0,40)+".md";
+    var blob=new Blob([TS.buildReport(TS._result)],{type:"text/markdown"});
+    var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},2000);
+    toast("Exported "+name,"ok");
+  },
+  exportCsv:function(){window.open("/api/export.csv","_blank");},
+
+  /* ── chat ── */
+  renderQBtns:function(){
+    var el=gid("qbtns");el.innerHTML="";
+    for(var i=0;i<BUILTIN_QUESTIONS.length;i++){(function(idx){var b=document.createElement("button");b.className="qb";b.innerHTML='<span class="qn">'+(idx+1)+"</span>"+esc(BUILTIN_QUESTIONS[idx]);b.onclick=function(){TS.pickQ(idx);};el.appendChild(b);})(i);}
+  },
+  pickQ:function(i){if(i===2){TS.pickSIEM();return;}TS.postChat(BUILTIN_QUESTIONS[i],"");},
+  pickSIEM:function(){
+    var ov=document.createElement("div");ov.className="ov";
+    var html='<div class="ovb"><div class="ovt">Choose SIEM Platform</div>';
+    for(var i=0;i<SIEM_PLATFORMS.length;i++)html+='<button class="ob" data-siem="'+esc(SIEM_PLATFORMS[i])+'">'+esc(SIEM_PLATFORMS[i])+'</button>';
+    html+='<button class="ob obc" data-cancel="1">Cancel</button></div>';
+    ov.innerHTML=html;
+    ov.addEventListener("click",function(e){var t=e.target;if(t===ov||t.getAttribute("data-cancel")){ov.remove();return;}var s=t.getAttribute("data-siem");if(s){ov.remove();TS.postChat("Generate SIEM detection rules",s);}});
+    document.body.appendChild(ov);
+  },
+  sendChat:function(){var t=gid("ci").value.trim();if(!t)return;gid("ci").value="";TS.postChat(t,"");},
+  postChat:function(question,siem){
+    if(!TS._result){toast("Run or open a scan first","err");return;}
+    TS.addChat("q",siem?"SIEM: "+siem:question);
+    TS.addChat("a","Searching + analyzing...");
+    fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:question,siem:siem})})
+      .then(function(r){return r.json();}).then(function(d){TS.replaceLastAssistant(d.answer||"No response");})
+      .catch(function(e){TS.replaceLastAssistant("Error: "+e);});
+  },
+  addChat:function(type,text){
+    var el=document.createElement("div");el.className="bub "+type;
+    if(type==="a"){el.innerHTML=mdToHtml(text)+'<button class="acopy">copy</button>';el.querySelector(".acopy").onclick=function(){navigator.clipboard.writeText(text);toast("Copied","ok");};}
+    else el.textContent=text;
+    var m=gid("msgs");m.appendChild(el);m.scrollTop=m.scrollHeight;
+  },
+  replaceLastAssistant:function(text){
+    var msgs=gid("msgs");var items=msgs.querySelectorAll(".bub.a");
+    if(items.length){var el=items[items.length-1];el.innerHTML=mdToHtml(text)+'<button class="acopy">copy</button>';el.querySelector(".acopy").onclick=function(){navigator.clipboard.writeText(text);toast("Copied","ok");};}
+    else TS.addChat("a",text);
+    msgs.scrollTop=msgs.scrollHeight;
+  },
+
+  /* ── bulk ── */
+  openBulk:function(){
+    var ov=document.createElement("div");ov.className="ov";
+    ov.innerHTML='<div class="ovb"><div class="ovt">Bulk Scan</div>'+
+      '<div class="hint">One IOC per line. Lines starting with # are ignored. They run one at a time.</div>'+
+      '<textarea class="bulkta" id="bulkTa" placeholder="8.8.8.8&#10;evil.com&#10;https://bad.site/x&#10;44d88612fea8a8f36de82e1278abb02f"></textarea>'+
+      '<button class="ob" id="bulkGo" style="text-align:center;color:#00d4ff;border-color:#00d4ff;margin-top:8px">Start bulk scan</button>'+
+      '<button class="ob obc" id="bulkClose" style="text-align:center">Cancel</button></div>';
+    ov.addEventListener("click",function(e){if(e.target===ov)ov.remove();});
+    document.body.appendChild(ov);
+    gid("bulkClose").onclick=function(){ov.remove();};
+    gid("bulkGo").onclick=function(){
+      var lines=gid("bulkTa").value.split(/\r?\n/).map(refang).filter(function(l){return l&&l.indexOf("#")!==0;});
+      var seen={},list=[];lines.forEach(function(l){if(!seen[l]&&typeLocal(l)!=="UNKNOWN"){seen[l]=1;list.push(l);}});
+      if(!list.length){toast("No valid IOCs found","err");return;}
+      ov.remove();TS.runBulk(list);
+    };
+  },
+  scanOne:function(ioc){
+    return new Promise(function(resolve){
+      var s=new EventSource("/api/scan?ioc="+encodeURIComponent(ioc));
+      s.addEventListener("done",function(e){s.close();resolve(JSON.parse(e.data).result);});
+      s.addEventListener("scanfail",function(){s.close();resolve(null);});
+      s.onerror=function(){s.close();resolve(null);};
+    });
+  },
+  runBulk:async function(list){
+    if(TS._scanning)return;TS.setBusy(true);
+    gid("vcard").style.display="none";gid("osintCard").style.display="none";gid("chat").className="card";gid("srcs").innerHTML="";
+    TS.showMain("prog");gid("steps").innerHTML="";
+    var tally={HIGH:0,MEDIUM:0,LOW:0,CLEAN:0,UNKNOWN:0};
+    for(var i=0;i<list.length;i++){
+      gid("progLabel").textContent="Bulk scan "+(i+1)+"/"+list.length+": "+list[i];
+      var r=await TS.scanOne(list[i]);
+      if(r&&r.verdict){tally[r.verdict]=(tally[r.verdict]||0)+1;}
+      var h=await fetch("/api/history").then(function(x){return x.json();}).catch(function(){return{history:TS._hist};});
+      TS.setHistory(h.history||TS._hist);
+      if(i<list.length-1)await new Promise(function(res){setTimeout(res,1200);});
+    }
+    TS.setBusy(false);
+    TS.showMain("empty");
+    gid("emptySub").textContent="Bulk scan done: "+list.length+" IOCs — HIGH "+tally.HIGH+", MEDIUM "+tally.MEDIUM+", LOW "+tally.LOW+", CLEAN "+tally.CLEAN+". Click any item on the left to view.";
+    gid("emptyCta").innerHTML="";
+    toast("Bulk scan complete ("+list.length+" IOCs)","ok");
+  },
+
+  clearHistory:function(){if(!confirm("Clear all history?"))return;fetch("/api/history/clear",{method:"POST"}).then(function(){TS.setHistory([]);TS._result=null;TS.showMain("empty");});},
+
+  /* ── settings (tabbed) ── */
+  openSettings:function(){
+    Promise.all([fetch("/api/keys").then(function(r){return r.json();}),fetch("/api/config").then(function(r){return r.json();})])
+      .then(function(res){TS.renderSettings(res[0].keys,res[1].config,res[1].sources);}).catch(function(){toast("Could not load settings","err");});
+  },
+  renderSettings:function(list,cfg,sources){
+    cfg=cfg||{};sources=sources||[];var disabled=cfg.disabledSources||[];
+    var ov=document.createElement("div");ov.className="ov";
+    var opts="",rows="";
+    for(var i=0;i<list.length;i++){var k=list[i];opts+='<option value="'+esc(k.code)+'">'+esc(k.name)+(k.set?"  ✓":"")+'</option>';rows+='<div class="krow"><span class="kname">'+esc(k.name)+'</span><span class="kset '+(k.set?"kon":"koff")+'" id="kstat-'+esc(k.code)+'">'+(k.set?"SET":"NOT SET")+'</span></div>';}
+    var modelOpts="";for(var m=0;m<AI_MODELS.length;m++)modelOpts+='<option value="'+esc(AI_MODELS[m])+'"'+(cfg.model===AI_MODELS[m]?" selected":"")+'>'+esc(AI_MODELS[m])+'</option>';
+    var srcToggles="";for(var s=0;s<sources.length;s++){var on=disabled.indexOf(sources[s])<0;srcToggles+='<label class="krow" style="cursor:pointer"><input type="checkbox" data-src="'+esc(sources[s])+'"'+(on?" checked":"")+' style="margin-right:8px"><span class="kname">'+esc(sources[s])+'</span></label>';}
+    var temp=(typeof cfg.temperature==="number")?cfg.temperature:0.2;
+    ov.innerHTML='<div class="ovb" style="max-width:430px;max-height:86vh;overflow:auto">'+
+      '<div class="tabs"><button class="tab active" data-tab="keys">Keys</button><button class="tab" data-tab="ai">AI</button><button class="tab" data-tab="sources">Sources</button><button class="tab" data-tab="data">Data</button></div>'+
+      '<div class="tab-pane active" id="pane-keys"><div class="kgrid">'+rows+'</div><select id="kSel">'+opts+'</select><input type="password" id="kVal" placeholder="paste key (blank = clear this key)"><button class="ob" id="kSave" style="text-align:center;color:#00d4ff;border-color:#00d4ff">Save key</button><button class="ob" id="kTest" style="text-align:center;color:#ffaa00;border-color:#3a2e10">Test all keys</button><button class="ob obc" id="kReset" style="text-align:center;color:#ff5a72;border-color:#3a1620">Reset ALL keys</button></div>'+
+      '<div class="tab-pane" id="pane-ai"><label class="kname" style="font-size:11px">Model</label><select id="cfgModel">'+modelOpts+'</select><label class="kname" style="font-size:11px">Temperature: <span id="tempVal">'+temp+'</span></label><input type="range" id="cfgTemp" min="0" max="1" step="0.1" value="'+temp+'" style="width:100%;margin-bottom:6px"><div class="hint">How predictable vs. creative the AI is. <b>0</b> = focused and consistent. Higher = more varied/speculative. <b>0.2</b> recommended for factual SOC work.</div></div>'+
+      '<div class="tab-pane" id="pane-sources"><div class="hint">Uncheck a source to skip it on future scans. The key is kept.</div><div class="kgrid">'+srcToggles+'</div></div>'+
+      '<div class="tab-pane" id="pane-data"><label class="krow" style="cursor:pointer"><input type="checkbox" id="cfgAutoCsv"'+(cfg.autoCsv?" checked":"")+' style="margin-right:8px"><span class="kname">Auto-append every scan to a CSV file</span></label><div class="hint">Appends each scan to ThreatScore_results.csv in your data folder. Use the CSV button in the sidebar for a manual export.</div><button class="ob obc" id="hClear" style="text-align:center;color:#ff5a72;border-color:#3a1620;margin-top:6px">Clear all history</button></div>'+
+      '<button class="ob" id="cfgSave" style="text-align:center;color:#00e676;border-color:#0a3a1f;margin-top:6px">Save preferences</button>'+
+      '<button class="ob obc" id="kClose" style="text-align:center">Close</button></div>';
+    ov.addEventListener("click",function(e){if(e.target===ov)ov.remove();});
+    document.body.appendChild(ov);
+    var tabBtns=ov.querySelectorAll(".tab");
+    for(var t=0;t<tabBtns.length;t++)tabBtns[t].addEventListener("click",function(){var n=this.getAttribute("data-tab");var bs=ov.querySelectorAll(".tab");for(var bi=0;bi<bs.length;bi++)bs[bi].classList.remove("active");this.classList.add("active");var ps=ov.querySelectorAll(".tab-pane");for(var pi=0;pi<ps.length;pi++)ps[pi].classList.remove("active");gid("pane-"+n).classList.add("active");});
+    gid("cfgTemp").addEventListener("input",function(){gid("tempVal").textContent=this.value;});
+    gid("kSave").onclick=function(){var code=gid("kSel").value,val=gid("kVal").value.trim();gid("kSave").textContent="Saving...";fetch("/api/keys",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name:code,value:val})}).then(function(r){return r.json();}).then(function(d){ov.remove();TS.renderSettings(d.keys,cfg,sources);toast("Key saved","ok");}).catch(function(){gid("kSave").textContent="Save key";toast("Save failed","err");});};
+    gid("kTest").onclick=function(){gid("kTest").textContent="Testing...";gid("kTest").disabled=true;fetch("/api/keys/test",{method:"POST"}).then(function(r){return r.json();}).then(function(d){var rmap=d.results||{};for(var code in rmap){var el=gid("kstat-"+code);if(!el)continue;var st=rmap[code];if(st==="ok"){el.textContent="OK";el.className="kset kon";}else if(st==="unset"){el.textContent="NOT SET";el.className="kset koff";}else{el.textContent="FAIL";el.className="kset koff";el.title=st;}}gid("kTest").textContent="Test all keys";gid("kTest").disabled=false;}).catch(function(){gid("kTest").textContent="Test all keys";gid("kTest").disabled=false;toast("Test failed","err");});};
+    gid("kReset").onclick=function(){if(!confirm("Remove ALL stored API keys?"))return;fetch("/api/keys/reset",{method:"POST"}).then(function(r){return r.json();}).then(function(d){ov.remove();TS.renderSettings(d.keys,cfg,sources);toast("All keys removed","ok");});};
+    gid("hClear").onclick=function(){ov.remove();TS.clearHistory();};
+    gid("cfgSave").onclick=function(){var dis=[];var boxes=ov.querySelectorAll("input[data-src]");for(var i=0;i<boxes.length;i++)if(!boxes[i].checked)dis.push(boxes[i].getAttribute("data-src"));var body={model:gid("cfgModel").value,temperature:parseFloat(gid("cfgTemp").value),autoCsv:gid("cfgAutoCsv").checked,disabledSources:dis};gid("cfgSave").textContent="Saving...";fetch("/api/config",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}).then(function(r){return r.json();}).then(function(){ov.remove();toast("Preferences saved","ok");}).catch(function(){gid("cfgSave").textContent="Save preferences";toast("Save failed","err");});};
+    gid("kClose").onclick=function(){ov.remove();};
+  }
+};
+
+document.addEventListener("DOMContentLoaded",function(){TS.init();});
+</script>
+</body>
+</html>
