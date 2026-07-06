@@ -1,53 +1,77 @@
 # ThreatScore Web
 
-ThreatScore Web is a local Windows threat-intelligence workbench for quickly
-triaging indicators of compromise (IOCs). Paste an IP, domain, URL, or file
-hash, and ThreatScore pulls together source intelligence, AI analysis, scan
-history, exports, and follow-up investigation prompts in one browser UI.
+ThreatScore Web is a local Windows threat-intelligence dashboard for triaging
+IOCs with source enrichment, AI-assisted analysis, history, chat, and exports.
 
-This Python edition runs locally on `127.0.0.1`, uses only the Python standard
-library at runtime, and stores API keys encrypted with Windows DPAPI under the
-current Windows user.
+Paste an IP address, domain, URL, or file hash. ThreatScore queries configured
+threat-intelligence sources, summarizes the evidence, and produces a concise
+SOC-style verdict you can act on.
 
-## What it does
+> Private/local-first by design: the app runs on `127.0.0.1`, stores keys
+> locally, and only contacts the external services you configure.
 
-- Scans IP addresses, domains, URLs, and MD5/SHA1/SHA256 hashes.
-- Refangs common defanged IOC formats such as `hxxp://`, `[.]`, `(dot)`, and
-  `[at]`.
-- Queries multiple threat-intelligence services and normalizes the results.
-- Produces a concise SOC-style verdict using OpenAI.
-- Adds optional Gemini OSINT context before analysis and follow-up answers.
-- Keeps local scan history, per-IOC result details, and per-IOC chat history.
-- Supports bulk scanning, one IOC per line.
-- Exports markdown reports with defanged IOCs.
-- Exports scan history as CSV.
-- Generates follow-up answers and SIEM detections for common platforms.
-- Lets you disable noisy sources without deleting their saved keys.
+## Highlights
 
-## Supported intelligence sources
+- Local browser UI served from a Python standard-library backend
+- IP, domain, URL, MD5, SHA1, and SHA256 IOC support
+- Automatic refanging for common defanged IOC formats
+- Multi-source threat-intelligence enrichment
+- OpenAI-generated SOC verdicts and recommended actions
+- Optional Gemini OSINT enrichment
+- Follow-up IOC chat for investigation questions
+- SIEM detection generation prompts
+- Bulk scan mode
+- Local scan history and cached results
+- Markdown report export with defanged IOC titles
+- CSV history export
+- Windows DPAPI-encrypted API key storage
+- Optional standalone Windows `.exe` build
 
-ThreatScore uses whichever API keys you add in Settings. Missing keys are simply
-skipped.
+## Supported IOC types
 
-| Source | Used for | Key name in app |
-| --- | --- | --- |
-| VirusTotal | IPs, domains, URLs, hashes | VirusTotal API Key |
-| AlienVault OTX | IPs, domains, URLs, hashes | OTX API Key |
-| AbuseIPDB | IP reputation | AbuseIPDB API Key |
-| IPInfo | IP ASN and location context | IPInfo API Key |
-| GreyNoise | Internet scanning/noise context | GreyNoise API Key |
-| urlscan.io | Domain and URL scan history | urlscan.io API Key |
-| Cloudflare URL Scanner | URL scan context | Cloudflare Account ID and API Token |
-| ThreatYeti / alphaMountain | Domain risk context | ThreatYeti API Key |
-| MalwareBazaar | Hash malware context | MalwareBazaar API Key |
-| OpenAI | Final SOC analysis and chat | OpenAI API Key |
-| Gemini | OSINT enrichment and fresh web context for chat | Gemini API Key |
+| IOC type | Examples |
+| --- | --- |
+| IP address | `8.8.8.8`, IPv6 addresses |
+| Domain | `example.com` |
+| URL | `https://example.com/path` |
+| Hash | MD5, SHA1, SHA256 |
+
+ThreatScore also refangs common formats such as:
+
+- `hxxp://example[.]com`
+- `example(dot)com`
+- `user[at]example[.]com`
+
+## Intelligence sources
+
+ThreatScore uses whichever API keys you configure. Sources without keys are
+skipped automatically.
+
+| Source | Coverage |
+| --- | --- |
+| VirusTotal | IPs, domains, URLs, hashes |
+| AlienVault OTX | IPs, domains, URLs, hashes |
+| AbuseIPDB | IP reputation |
+| IPInfo | IP ASN and location context |
+| GreyNoise | Internet scanning/noise context |
+| urlscan.io | Domain and URL scan history |
+| Cloudflare URL Scanner | URL scan context |
+| ThreatYeti / alphaMountain | Domain risk context |
+| MalwareBazaar | Malware hash context |
+| OpenAI | Final analysis and follow-up chat |
+| Gemini | OSINT enrichment and fresh context |
 
 ## Quick start
 
-### Option 1: Run with Python
+### Requirements
 
-Requires Windows and Python 3.10 or newer.
+- Windows
+- Python 3.10 or newer
+- API keys for the sources you want to use
+
+No Python packages are required to run the app.
+
+### Run locally
 
 Double-click:
 
@@ -55,21 +79,38 @@ Double-click:
 start.cmd
 ```
 
-Or run from this folder:
+Or run:
 
 ```powershell
 python server.py
 ```
 
-ThreatScore starts at:
+Open:
 
 ```text
 http://localhost:8736
 ```
 
-If port `8736` is busy, the server automatically tries the next few ports.
+If port `8736` is busy, ThreatScore automatically tries later ports.
 
-### Option 2: Build a standalone EXE
+## First-time setup
+
+1. Start ThreatScore.
+2. Open Settings with the gear button.
+3. Add API keys for the sources you want.
+4. Click **Test all keys**.
+5. Pick the OpenAI model and temperature.
+6. Disable any sources you do not want to query.
+
+Recommended minimum setup:
+
+- VirusTotal API key
+- OpenAI API key
+
+More sources produce better context, especially for reputation, infrastructure,
+malware hashes, and OSINT-heavy investigations.
+
+## Build a standalone EXE
 
 Double-click:
 
@@ -77,56 +118,46 @@ Double-click:
 build-exe.cmd
 ```
 
-The build script installs PyInstaller if needed and creates:
+The script installs PyInstaller if needed and creates:
 
 ```text
 dist\ThreatScore.exe
 ```
 
-The EXE can run on another Windows machine without requiring Python.
+That executable can run on Windows machines without Python installed.
 
-Note: one-file PyInstaller applications are sometimes flagged by antivirus
-tools as false positives because they are packed executables. If that happens,
-use the Python run mode or allow the built executable if you trust your own
-build.
+Note: one-file PyInstaller apps can be flagged by antivirus tools as false
+positives because they are packed executables. If that happens, use the Python
+run mode or allow the binary only if you trust your own build.
 
-## First setup
+## How it works
 
-1. Start the app.
-2. Open Settings with the gear button in the lower-left sidebar.
-3. Add the API keys you want to use.
-4. Click "Test all keys" to verify them.
-5. Set your preferred OpenAI model and temperature.
-6. Optionally disable sources you do not want to query.
+ThreatScore starts a local HTTP server and serves `ui.html`. The UI talks to
+the backend through local API routes and a Server-Sent Events scan stream.
 
-Recommended minimum useful setup:
+During a scan, the backend:
 
-- VirusTotal API key
-- OpenAI API key
+1. Refangs and classifies the IOC.
+2. Runs the relevant enabled sources.
+3. Normalizes source results into a compact intelligence summary.
+4. Optionally adds Gemini OSINT context.
+5. Sends the summary to OpenAI for a SOC-style verdict.
+6. Stores the result locally for history, chat, and exports.
 
-Additional sources improve context and confidence, especially for IP reputation,
-URL infrastructure, malware hashes, and OSINT-heavy investigations.
+## Follow-up chat
 
-## Workflow
-
-1. Paste an IOC into the scan box.
-2. ThreatScore detects the IOC type and runs the relevant sources.
-3. Source cards update as each service responds.
-4. OpenAI produces an operational verdict and recommended actions.
-5. Ask follow-up questions in IOC Chat.
-6. Export a markdown report or download CSV history when needed.
-
-Built-in follow-up prompts include:
+After a scan, IOC Chat can answer investigation questions using the current scan
+context. Built-in prompts include:
 
 - Known threat actor or campaign context
 - MITRE ATT&CK techniques
-- SIEM detection generation
+- SIEM detection rules
 - False-positive analysis
 - Related IOC hunting
 - Incident report summary
 - Organizational risk summary
 
-Supported SIEM output targets:
+Supported SIEM targets:
 
 - Splunk SPL
 - IBM QRadar AQL
@@ -135,57 +166,52 @@ Supported SIEM output targets:
 - Chronicle / YARA-L
 - Sumo Logic
 
-## Local data and key storage
+## Local data
 
-ThreatScore keeps data in:
+ThreatScore stores local app data in:
 
 ```text
 %APPDATA%\ThreatScore
 ```
 
-Files created there include:
-
 | File | Purpose |
 | --- | --- |
-| `keys.dat` | Encrypted API key store |
+| `keys.dat` | DPAPI-encrypted API key store |
 | `history.json` | Recent scan history |
 | `results.json` | Cached scan results |
 | `chats.json` | Per-IOC chat transcripts |
-| `config.json` | Model, temperature, source toggles, CSV setting |
+| `config.json` | Preferences and source toggles |
 | `ThreatScore_results.csv` | Optional auto-appended CSV output |
 
-API keys are encrypted with Windows DPAPI using the current Windows user scope.
-That means the key file is intended to be readable only by the same Windows user
-on the same machine profile. Do not upload `keys.dat` or anything from
-`%APPDATA%\ThreatScore`.
+Do not commit or share anything from `%APPDATA%\ThreatScore`.
 
-## Privacy and security notes
+## Security and privacy
 
-- The web app is served locally from `127.0.0.1`.
-- API keys are not included in this repository.
-- Generated build output is ignored by Git.
-- IOCs and scan data are sent to the third-party services whose keys you enable.
+- The web app binds to `127.0.0.1`.
+- API keys are stored locally and encrypted with Windows DPAPI.
+- API keys are not part of this repository.
+- Build output and caches are ignored by Git.
+- IOCs and scan data are sent to the third-party sources you enable.
 - OpenAI receives the normalized scan summary when AI analysis or chat is used.
-- Gemini receives the IOC or chat question when Gemini OSINT is enabled.
-- Exported markdown reports defang the IOC in the report title.
+- Gemini receives IOC/chat context when Gemini OSINT is enabled.
 
 ## Configuration
 
-Set a custom port:
+Use a custom port:
 
 ```powershell
 set PORT=9000
 python server.py
 ```
 
-Prevent the browser from opening automatically:
+Prevent auto-opening the browser:
 
 ```powershell
 set TS_NO_OPEN=1
 python server.py
 ```
 
-The app currently allows these OpenAI model names from Settings:
+Available OpenAI model choices in Settings:
 
 - `gpt-4o`
 - `gpt-4o-mini`
@@ -193,102 +219,90 @@ The app currently allows these OpenAI model names from Settings:
 - `gpt-4.1-mini`
 - `gpt-4-turbo`
 
-Default settings:
+Defaults:
 
 - Model: `gpt-4o`
 - Temperature: `0.2`
 - Auto CSV: off
 - Disabled sources: none
 
-## Project files
+## Project structure
+
+```text
+.
+|-- README.md
+|-- build-exe.cmd
+|-- secrets_store.py
+|-- server.py
+|-- start.cmd
+`-- ui.html
+```
 
 | File | Purpose |
 | --- | --- |
-| `server.py` | Local HTTP server, API routes, scan logic, AI prompts, persistence |
-| `ui.html` | Browser UI, scan workflow, settings, chat, export behavior |
-| `secrets_store.py` | Windows DPAPI key encryption and decryption |
-| `start.cmd` | Finds Python 3.10+ and starts the server |
-| `build-exe.cmd` | Builds `dist\ThreatScore.exe` with PyInstaller |
-| `.gitignore` | Keeps generated files, caches, archives, and secret-like files out of Git |
+| `server.py` | Local server, routes, scan workflow, AI prompts, persistence |
+| `ui.html` | Browser UI, settings, history, chat, reports, bulk mode |
+| `secrets_store.py` | Windows DPAPI encryption for saved API keys |
+| `start.cmd` | Finds Python and starts ThreatScore |
+| `build-exe.cmd` | Builds a standalone EXE with PyInstaller |
 
-## API routes
-
-These routes are served locally by `server.py`:
+## Local API
 
 | Route | Method | Purpose |
 | --- | --- | --- |
 | `/` | GET | Serves the UI |
-| `/api/scan?ioc=...` | GET | Runs a scan over Server-Sent Events |
+| `/api/scan?ioc=...` | GET | Runs a scan using Server-Sent Events |
 | `/api/history` | GET | Returns scan history |
-| `/api/result?ioc=...` | GET | Returns a cached result and chat transcript |
+| `/api/result?ioc=...` | GET | Returns cached result and chat transcript |
 | `/api/export.csv` | GET | Downloads scan history as CSV |
 | `/api/keys` | GET/POST | Lists key status or saves/clears one key |
 | `/api/keys/test` | POST | Tests configured API keys |
 | `/api/keys/reset` | POST | Clears all saved keys |
-| `/api/config` | GET/POST | Reads or saves app preferences |
+| `/api/config` | GET/POST | Reads or saves preferences |
 | `/api/history/clear` | POST | Clears history, cached results, and chats |
 | `/api/chat` | POST | Sends a follow-up question for the current scan |
-
-## Repository upload checklist
-
-Upload these files to GitHub:
-
-- `.gitignore`
-- `README.md`
-- `build-exe.cmd`
-- `secrets_store.py`
-- `server.py`
-- `start.cmd`
-- `ui.html`
-
-Do not upload:
-
-- `.git/`
-- `dist/`
-- `build/`
-- `__pycache__/`
-- `*.pyc`
-- `.env` files
-- `*.key`, `*.pem`, `*.p12`, or `*.pfx`
-- zip or rar archives
-- anything from `%APPDATA%\ThreatScore`
 
 ## Troubleshooting
 
 ### Python is not found
 
-Install Python 3.10 or newer from `python.org` and enable "Add Python to PATH"
-during installation. `start.cmd` also checks common per-user Python install
+Install Python 3.10 or newer from `python.org`. During installation, enable
+**Add Python to PATH**. The launcher also checks common per-user Python install
 locations.
 
-### A source says skipped
+### A source is skipped
 
-That source does not have a saved key, or it was disabled in Settings.
+The source has no saved API key, or it is disabled in Settings.
 
 ### A key test fails
 
-Check that the key is valid, has the required product permissions, and has not
-hit quota or account restrictions. Cloudflare requires both the account ID and
-an API token with URL Scanner access.
+Check that the key is valid, has the required permissions, and has not hit quota
+or account restrictions. Cloudflare requires both an account ID and an API token
+with URL Scanner access.
 
 ### OpenAI analysis is unavailable
 
-Add an OpenAI API key in Settings and test it. If the key is valid, confirm the
-selected model is available to your account.
+Add an OpenAI API key in Settings and test it. Also confirm the selected model
+is available to your account.
 
-### Browser does not open
+### The browser does not open
 
-Open the printed local URL manually. By default it is:
+Open the printed local URL manually, usually:
 
 ```text
 http://localhost:8736
 ```
 
-### The port is already in use
+## Roadmap ideas
 
-ThreatScore automatically tries later ports. You can also set `PORT` manually.
+- Screenshots and demo GIFs
+- Optional Docker/package build
+- Richer report templates
+- Source confidence weighting
+- Additional SIEM rule formats
+- Optional case-management export
 
 ## License
 
-No license file is included yet. Until a license is added, treat this as private
-source code.
+No license file is included yet. Until a license is added, treat this repository
+as private source code.
