@@ -292,17 +292,3 @@ Open the printed local URL manually, usually:
 ```text
 http://localhost:8736
 ```
-
-## Roadmap ideas
-
-- Screenshots and demo GIFs
-- Optional Docker/package build
-- Richer report templates
-- Source confidence weighting
-- Additional SIEM rule formats
-- Optional case-management export
-
-## License
-
-No license file is included yet. Until a license is added, treat this repository
-as private source code.
